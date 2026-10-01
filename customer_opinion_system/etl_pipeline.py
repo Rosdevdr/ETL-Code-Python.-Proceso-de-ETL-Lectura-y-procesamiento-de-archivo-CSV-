@@ -132,35 +132,59 @@ class CustomerOpinionETL:
             return False
 
     def run_etl_process(self):
+        from tqdm import tqdm
+        import time
+        
         start_time = datetime.now()
         self.logger.info("=== INICIO PROCESO ETL ===")
+        
+        print("\n INICIANDO PIPELINE ETL \n")
 
-        if not self.connect_db():
-            return False
+        with tqdm(total=100, desc="Preparando...", bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}% [{elapsed}<{remaining}]") as pbar:
+            pbar.set_description("Conectando a BD")
+            if not self.connect_db():
+                return False
+            pbar.update(10)
+            time.sleep(0.5) # Pausa visual breve
 
-        raw_data = self.extract_data()
-        if not raw_data:
-            return False
+            pbar.set_description("Extrayendo CSVs")
+            raw_data = self.extract_data()
+            if not raw_data:
+                return False
+            pbar.update(25)
+            time.sleep(0.5)
 
-        transformed_data = self.transform_data(raw_data)
-        load_results = self.load_data(transformed_data)
-        if not load_results:
-            return False
+            pbar.set_description("Transformando datos")
+            transformed_data = self.transform_data(raw_data)
+            pbar.update(30)
+            time.sleep(0.5)
+
+            pbar.set_description("Cargando a SQL Server")
+            load_results = self.load_data(transformed_data)
+            if not load_results:
+                return False
+            pbar.update(25)
+            time.sleep(0.5)
+
+            pbar.set_description("Verificando carga")
+            pbar.update(10)
+            time.sleep(0.5)
 
         self.verify_data_load()
 
         end_time = datetime.now()
         self.logger.info(f"ETL completado en {end_time - start_time}")
+        print(f"\n🎉 ¡Proceso finalizado con éxito en {end_time - start_time}!\n")
         return True
 
 
 def main():
-    print("Sistema de Análisis de Opiniones de Clientes - ETL SQL Server")
+    print("======================================================")
+    print(" Sistema de Análisis de Opiniones de Clientes - ETL")
+    print("======================================================")
     etl = CustomerOpinionETL()
-    if etl.run_etl_process():
-        print("ETL completado")
-    else:
-        print("Error en ETL")
+    if not etl.run_etl_process():
+        print("\nError crítico en el ETL. Revisa etl_process.log")
 
 
 if __name__ == "__main__":
